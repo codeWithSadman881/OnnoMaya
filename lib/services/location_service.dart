@@ -35,7 +35,7 @@ class LocationService {
     try {
       final response = await http.get(
         url,
-        headers: {'User-Agent': 'KhabarLagbeApp'},
+        headers: {'User-Agent': 'OnnoMaya'},
       );
 
       if (response.statusCode == 200) {
