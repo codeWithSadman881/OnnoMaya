@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import '../services/location_service.dart';
 import '../models/food_item.dart';
-import '../widgets/food_card.dart';
-import 'donate_screen.dart';
+import '../widgets/food_card.dart'; // আপনার তৈরি কাস্টম ফুড কার্ড উইজেট
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,9 +10,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _locationInfo = "Location not fetched";
+  String _activeFilter = 'all'; // 'all', 'human', 'animal'
 
-  final List<FoodItem> _foodList = [
+  // ডেমো খাবারের তালিকা
+  final List<FoodItem> _allFoodItems = [
     FoodItem(
       id: '1',
       title: 'Cooked Rice & Chicken Curry',
@@ -23,14 +21,18 @@ class _HomeScreenState extends State<HomeScreen> {
       quantity: '10 Packets',
       location: 'Dhanmondi 32, Dhaka',
       timeAgo: '20 mins ago',
+      contactNumber: '01700000000',
+      category: 'human',
     ),
     FoodItem(
       id: '2',
-      title: 'Vegetable Khichuri',
-      description: 'Hot vegetarian meal packaged properly.',
-      quantity: '5 Packets',
+      title: 'Fresh Dog Food & Meat Trimmings',
+      description: 'Clean chicken remnants and boiled rice for street dogs.',
+      quantity: '15 Packets',
       location: 'Uttara Sector 10, Dhaka',
-      timeAgo: '45 mins ago',
+      timeAgo: '35 mins ago',
+      contactNumber: '01800000000',
+      category: 'animal',
     ),
     FoodItem(
       id: '3',
@@ -39,95 +41,89 @@ class _HomeScreenState extends State<HomeScreen> {
       quantity: '15 Pcs',
       location: 'Mirpur 10, Dhaka',
       timeAgo: '1 hr ago',
+      contactNumber: '01900000000',
+      category: 'both',
     ),
   ];
 
-  void _getLocation() async {
-    Position? pos = await LocationService.getCurrentLocation();
-    if (pos != null) {
-      String address = await LocationService.getAddressFromCoordinates(
-        pos.latitude,
-        pos.longitude,
-      );
-      setState(() {
-        _locationInfo = address;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // ফিল্টারিং লজিক
+    final filteredItems = _allFoodItems.where((item) {
+      if (_activeFilter == 'all') return true;
+      if (item.category == 'both') return true; // 'both' হলে মানুষ বা প্রাণী দুই ফিল্টারেই দেখাবে
+      return item.category == _activeFilter;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OnnoMaya - Nearby Food'),
+        title: const Text("OnnoMaya - Nearby Food"),
         backgroundColor: Colors.orange,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: _getLocation,
-            tooltip: 'Get Current Location',
-          ),
-        ],
       ),
       body: Column(
         children: [
-          Container(
-            color: Colors.orange.shade50,
+          // Filter Chips Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                const Icon(Icons.location_on, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _locationInfo,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
+                FilterChip(
+                  label: const Text('All'),
+                  selected: _activeFilter == 'all',
+                  onSelected: (selected) {
+                    setState(() => _activeFilter = 'all');
+                  },
                 ),
-                TextButton(
-                  onPressed: _getLocation,
-                  child: const Text('Update'),
+                const SizedBox(width: 8),
+                FilterChip(
+                  avatar: const Icon(Icons.person, size: 18),
+                  label: const Text('For Humans'),
+                  selected: _activeFilter == 'human',
+                  onSelected: (selected) {
+                    setState(() => _activeFilter = 'human');
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  avatar: const Icon(Icons.pets, size: 18),
+                  label: const Text('For Stray Animals'),
+                  selected: _activeFilter == 'animal',
+                  onSelected: (selected) {
+                    setState(() => _activeFilter = 'animal');
+                  },
                 ),
               ],
             ),
           ),
+
+          // Food List View
           Expanded(
             child: ListView.builder(
-              itemCount: _foodList.length,
+              itemCount: filteredItems.length,
               itemBuilder: (context, index) {
-                final food = _foodList[index];
+                final item = filteredItems[index];
+                // এখানে foodItem-এর বদলে 'item' এবং onRequest পাস করা হলো
                 return FoodCard(
-                  item: food,
+                  item: item,
                   onRequest: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Request sent for ${food.title}!')),
+                      SnackBar(content: Text('Requested for ${item.title}')),
                     );
                   },
-                );
+                ); 
               },
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          // ডোনেট স্ক্রিন থেকে নতুন ডাটা ফেরত পাওয়া
-          final newFood = await Navigator.push<FoodItem>(
-            context,
-            MaterialPageRoute(builder: (context) => const DonateScreen()),
-          );
-
-          if (newFood != null) {
-            setState(() {
-              _foodList.insert(0, newFood); // সবার উপরে নতুন খাবার যোগ হবে
-            });
-          }
-        },
         backgroundColor: Colors.orange,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Donate Food', style: TextStyle(color: Colors.white)),
+        onPressed: () {
+          // Navigate to Donate Screen
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Donate Food"),
       ),
     );
   }

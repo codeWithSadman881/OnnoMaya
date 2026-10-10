@@ -5,7 +5,8 @@ class FoodItem {
   final String quantity;
   final String location;
   final String timeAgo;
-  final String contactNumber;
+  final String contactNumber; // required করে দেওয়া হলো
+  final String category;
 
   FoodItem({
     required this.id,
@@ -14,6 +15,7 @@ class FoodItem {
     required this.quantity,
     required this.location,
     required this.timeAgo,
-    this.contactNumber = '01700000000',
+    required this.contactNumber, // কোনো ডিফল্ট নম্বর থাকবে না
+    required this.category,
   });
 }

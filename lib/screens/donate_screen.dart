@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/food_item.dart';
 
 class DonateScreen extends StatefulWidget {
   const DonateScreen({super.key});
@@ -9,117 +8,130 @@ class DonateScreen extends StatefulWidget {
 }
 
 class _DonateScreenState extends State<DonateScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _quantityController = TextEditingController();
   final _locationController = TextEditingController();
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  void _submitData() {
-    if (_formKey.currentState!.validate()) {
-      final newFoodItem = FoodItem(
-        id: DateTime.now().toString(),
-        title: _titleController.text,
-        quantity: _quantityController.text,
-        location: _locationController.text,
-        contactNumber: _phoneController.text,
-        description: _descriptionController.text.isEmpty
-            ? 'No extra description provided.'
-            : _descriptionController.text,
-        timeAgo: 'Just now',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('খাবারের পোস্ট সফলভাবে তৈরি হয়েছে!')),
-      );
-
-      Navigator.pop(context, newFoodItem);
-    }
-  }
+  // ক্যাটাগরি ট্র্যাক করার জন্য ভেরিয়েবল (ডিফল্ট 'human')
+  String _selectedCategory = 'human';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Donate Food'),
+        title: const Text("Donate Food"),
         backgroundColor: Colors.orange,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Food Name / Title',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.fastfood),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category Selection Header & Toggle Buttons
+            const Text(
+              "Who is this food for?",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'human',
+                  label: Text('For Humans'),
+                  icon: Icon(Icons.person),
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'খাবারের নাম লিখুন' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'Quantity (e.g. 5 Packets / 2 KG)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.production_quantity_limits),
+                ButtonSegment(
+                  value: 'animal',
+                  label: Text('For Strays'),
+                  icon: Icon(Icons.pets),
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'পরিমাণ লিখুন' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Pickup Location Address',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
+                ButtonSegment(
+                  value: 'both',
+                  label: Text('Both'),
+                  icon: Icon(Icons.favorite),
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'ঠিকানা লিখুন' : null,
+              ],
+              selected: {_selectedCategory},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _selectedCategory = newSelection.first;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Form Inputs
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: "Food Name / Title",
+                prefixIcon: Icon(Icons.fastfood),
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Contact Phone Number',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'ফোন নম্বর লিখুন'
-                    : null,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _quantityController,
+              decoration: const InputDecoration(
+                labelText: "Quantity (e.g. 5 Packets / 2 KG)",
+                prefixIcon: Icon(Icons.shopping_cart),
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional / Condition)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _locationController,
+              decoration: const InputDecoration(
+                labelText: "Pickup Location Address",
+                prefixIcon: Icon(Icons.location_on),
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submitData,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: "Contact Phone Number",
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: "Description (Optional / Condition)",
+                prefixIcon: Icon(Icons.description),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: Colors.white,
                 ),
+                onPressed: () {
+                  // এখানে নতুন FoodItem অবজেক্ট তৈরি করে ডাটাবেসে সেভ বা পপ করবেন
+                  // category ফিল্ডে pass করবেন: _selectedCategory
+                  Navigator.pop(context);
+                },
                 child: const Text(
-                  'Post Donation',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  "Post Donation",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
