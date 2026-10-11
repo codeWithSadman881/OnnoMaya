@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart'; // আপাতত হোম স্ক্রিনে রিডাইরেক্ট করার জন্য
+import 'admin_dashboard_screen.dart'; // এডমিন ড্যাশবোর্ড স্ক্রিন ইম্পোর্ট করা হলো
+import 'donor_dashboard_screen.dart'; // ডোনর ড্যাশবোর্ড স্ক্রিন ইম্পোর্ট করা হলো
+import 'volunteer_dashboard_screen.dart'; // ভলান্টিয়ার ড্যাশবোর্ড স্ক্রিন ইম্পোর্ট করা হলো
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -50,10 +52,9 @@ class RoleSelectionScreen extends StatelessWidget {
               icon: Icons.fastfood,
               color: Colors.orange,
               onTap: () {
-                // ডোনর প্যানেল বা হোম স্ক্রিনে নিয়ে যাওয়া
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  MaterialPageRoute(builder: (context) => const DonorDashboardScreen()),
                 );
               },
             ),
@@ -67,16 +68,15 @@ class RoleSelectionScreen extends StatelessWidget {
               icon: Icons.people,
               color: Colors.green,
               onTap: () {
-                // ভলান্টিয়ার বা রিসিভার প্যানেল
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  MaterialPageRoute(builder: (context) => const VolunteerDashboardScreen()),
                 );
               },
             ),
             const SizedBox(height: 16),
 
-            // ৩. Admin Card / Button
+            // ৩. Admin Card / Button (আপডেট করা হয়েছে)
             _buildRoleCard(
               context,
               title: "Admin Panel",
@@ -84,10 +84,10 @@ class RoleSelectionScreen extends StatelessWidget {
               icon: Icons.admin_panel_settings,
               color: Colors.blueAccent,
               onTap: () {
-                // এডমিন প্যানেল
+                // এডমিন ড্যাশবোর্ডে নিয়ে যাওয়া
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
                 );
               },
             ),
