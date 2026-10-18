@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
+import '../models/food_item.dart';
+import '../services/food_repository.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  @override
   Widget build(BuildContext context) {
+    final pendingList = FoodRepository.pendingItems;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Admin Control Panel"),
         backgroundColor: Colors.blueAccent,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -36,7 +46,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatCard(
                     title: "Total Posts",
-                    value: "24",
+                    value: "${FoodRepository.allItems.length}",
                     icon: Icons.post_add,
                     color: Colors.blueAccent,
                   ),
@@ -54,7 +64,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatCard(
                     title: "Pending",
-                    value: "3 Posts",
+                    value: "${pendingList.length} Posts",
                     icon: Icons.pending_actions,
                     color: Colors.orange,
                   ),
@@ -73,18 +83,18 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            _buildPendingPostItem(
-              context,
-              title: "50 Packets Surplus Dinner",
-              donor: "Hotel Star Garden",
-              location: "Dhanmondi, Dhaka",
-            ),
-            _buildPendingPostItem(
-              context,
-              title: "Fresh Bakery Products",
-              donor: "Tasty Treat Bakery",
-              location: "Uttara, Dhaka",
-            ),
+            if (pendingList.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Text(
+                    "No pending posts for approval 🎉",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              ...pendingList.map((item) => _buildPendingPostItem(context, item)),
           ],
         ),
       ),
@@ -127,12 +137,7 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 
   // পেন্ডিং পোস্ট আইটেম কার্ড
-  Widget _buildPendingPostItem(
-    BuildContext context, {
-    required String title,
-    required String donor,
-    required String location,
-  }) {
+  Widget _buildPendingPostItem(BuildContext context, FoodItem item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -144,22 +149,24 @@ class AdminDashboardScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                Expanded(
+                  child: Text(
+                    "${item.title} (${item.quantity})",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    "Pending",
-                    style: TextStyle(
+                  child: Text(
+                    item.category.toUpperCase(),
+                    style: const TextStyle(
                       color: Colors.orange,
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
@@ -170,15 +177,25 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "Donor: $donor • $location",
+              "Location: ${item.location}\nPhone: ${item.phone}",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                "Note: ${item.description}",
+                style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      setState(() {
+                        FoodRepository.updateStatus(item.id, 'Approved');
+                      });
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Post Approved!")),
                       );
@@ -195,6 +212,9 @@ class AdminDashboardScreen extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
+                      setState(() {
+                        FoodRepository.updateStatus(item.id, 'Rejected');
+                      });
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Post Rejected!")),
                       );

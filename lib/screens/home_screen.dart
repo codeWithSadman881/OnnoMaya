@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/food_item.dart';
-import '../widgets/food_card.dart'; // আপনার তৈরি কাস্টম ফুড কার্ড উইজেট
+import '../services/food_repository.dart';
+import '../widgets/food_card.dart';
+import 'donate_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'volunteer_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,46 +16,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _activeFilter = 'all'; // 'all', 'human', 'animal'
 
-  // ডেমো খাবারের তালিকা
-  final List<FoodItem> _allFoodItems = [
-    FoodItem(
-      id: '1',
-      title: 'Cooked Rice & Chicken Curry',
-      description: 'Freshly prepared extra food from event, good condition.',
-      quantity: '10 Packets',
-      location: 'Dhanmondi 32, Dhaka',
-      timeAgo: '20 mins ago',
-      contactNumber: '01700000000',
-      category: 'human',
-    ),
-    FoodItem(
-      id: '2',
-      title: 'Fresh Dog Food & Meat Trimmings',
-      description: 'Clean chicken remnants and boiled rice for street dogs.',
-      quantity: '15 Packets',
-      location: 'Uttara Sector 10, Dhaka',
-      timeAgo: '35 mins ago',
-      contactNumber: '01800000000',
-      category: 'animal',
-    ),
-    FoodItem(
-      id: '3',
-      title: 'Bakery Items & Bread',
-      description: 'Fresh surplus bakery items from shop.',
-      quantity: '15 Pcs',
-      location: 'Mirpur 10, Dhaka',
-      timeAgo: '1 hr ago',
-      contactNumber: '01900000000',
-      category: 'both',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    // ফিল্টারিং লজিক
-    final filteredItems = _allFoodItems.where((item) {
+    // FoodRepository থেকে শুধু Approved স্ট্যাটাসের খাবারগুলো ফিল্টার করা
+    final approvedItems = FoodRepository.allItems.where((item) {
+      return item.status == 'Approved';
+    }).toList();
+
+    // ক্যাটাগরি ফিল্টারিং লজিক (All, For Humans, For Stray Animals)
+    final filteredItems = approvedItems.where((item) {
       if (_activeFilter == 'all') return true;
-      if (item.category == 'both') return true; // 'both' হলে মানুষ বা প্রাণী দুই ফিল্টারেই দেখাবে
+      if (item.category == 'both') return true; // 'both' হলে দুই ফিল্টারেই দেখাবে
       return item.category == _activeFilter;
     }).toList();
 
@@ -59,6 +34,31 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("OnnoMaya - Nearby Food"),
         backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        actions: [
+          // ভলান্টিয়ার প্যানেল শর্টকাট
+          IconButton(
+            icon: const Icon(Icons.delivery_dining),
+            tooltip: "Volunteer Panel",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const VolunteerDashboardScreen()),
+              ).then((_) => setState(() {}));
+            },
+          ),
+          // এডমিন প্যানেল শর্টকাট
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings),
+            tooltip: "Admin Panel",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+              ).then((_) => setState(() {}));
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -99,28 +99,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Food List View
           Expanded(
-            child: ListView.builder(
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = filteredItems[index];
-                // এখানে foodItem-এর বদলে 'item' এবং onRequest পাস করা হলো
-                return FoodCard(
-                  item: item,
-                  onRequest: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Requested for ${item.title}')),
-                    );
-                  },
-                ); 
-              },
-            ),
+            child: filteredItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No approved food donations nearby right now 🍲",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return FoodCard(
+                        item: item,
+                        onRequest: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Requested for ${item.title}'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
         onPressed: () {
-          // Navigate to Donate Screen
+          // DonateScreen-এ নিয়ে যাওয়া এবং ফিরে আসলে পেজ রিফ্রেশ করা
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DonateScreen()),
+          ).then((_) {
+            setState(() {});
+          });
         },
         icon: const Icon(Icons.add),
         label: const Text("Donate Food"),

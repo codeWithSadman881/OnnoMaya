@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/food_item.dart';
+import '../services/food_repository.dart';
 
 class DonateScreen extends StatefulWidget {
   const DonateScreen({super.key});
@@ -14,8 +16,59 @@ class _DonateScreenState extends State<DonateScreen> {
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  // ক্যাটাগরি ট্র্যাক করার জন্য ভেরিয়েবল (ডিফল্ট 'human')
+  // ক্যাটাগরি ট্র্যাক করার জন্য ভেরিয়েবল (ডিফল্ট 'human')
   String _selectedCategory = 'human';
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _quantityController.dispose();
+    _locationController.dispose();
+    _phoneController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _submitForm() {
+    // খালি ঘর আছে কিনা চেক করা
+    if (_titleController.text.trim().isEmpty ||
+        _quantityController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("অনুগ্রহ করে প্রয়োজনীয় সব ঘর পূরণ করুন!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // নতুন পোস্ট অবজেক্ট তৈরি করে Repository-তে যোগ করা
+    final newItem = FoodItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text.trim(),
+      quantity: _quantityController.text.trim(),
+      location: _locationController.text.trim(),
+      phone: _phoneController.text.trim(),
+      description: _descriptionController.text.trim(),
+      category: _selectedCategory,
+      status: 'Pending',
+    );
+
+    FoodRepository.addFoodItem(newItem);
+
+    // সফল মেসেজ দেখানো
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("ডোনেশন পোস্টটি সফলভাবে অনুমোদনের জন্য পাঠানো হয়েছে!"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // পোস্ট জমা শেষে আগের স্ক্রিনে ফেরত যাওয়া
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +76,7 @@ class _DonateScreenState extends State<DonateScreen> {
       appBar: AppBar(
         title: const Text("Donate Food"),
         backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -119,12 +173,11 @@ class _DonateScreenState extends State<DonateScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                onPressed: () {
-                  // এখানে নতুন FoodItem অবজেক্ট তৈরি করে ডাটাবেসে সেভ বা পপ করবেন
-                  // category ফিল্ডে pass করবেন: _selectedCategory
-                  Navigator.pop(context);
-                },
+                onPressed: _submitForm,
                 child: const Text(
                   "Post Donation",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

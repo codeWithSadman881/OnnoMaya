@@ -1,21 +1,34 @@
 import 'package:flutter/material.dart';
+import '../models/food_item.dart';
+import '../services/food_repository.dart';
 
-class VolunteerDashboardScreen extends StatelessWidget {
+class VolunteerDashboardScreen extends StatefulWidget {
   const VolunteerDashboardScreen({super.key});
 
   @override
+  State<VolunteerDashboardScreen> createState() => _VolunteerDashboardScreenState();
+}
+
+class _VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
+  @override
   Widget build(BuildContext context) {
+    // শুধুমাত্র যেসব পোস্ট Admin থেকে 'Approved' হয়েছে সেগুলো ফিল্টার করে নেওয়া
+    final approvedList = FoodRepository.allItems
+        .where((item) => item.status == 'Approved')
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Volunteer & Receiver Panel"),
         backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ১. ওয়েলকাম হেডার
+            // ১. ওয়েলকাম হেডার
             const Text(
               "Hello, Hero Volunteer! 🤝",
               style: TextStyle(
@@ -36,7 +49,7 @@ class VolunteerDashboardScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatCard(
                     title: "Available Foods",
-                    value: "5 Items",
+                    value: "${approvedList.length} Items",
                     icon: Icons.fastfood,
                     color: Colors.green,
                   ),
@@ -64,33 +77,19 @@ class VolunteerDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // ডেমো এভেইলেবল ফুড কার্ড ১
-            _buildAvailableFoodCard(
-              context,
-              title: "Fresh Biryani Packets",
-              quantity: "20 Portions",
-              location: "Gulshan-2, Dhaka",
-              donor: "Rahim Restaurant",
-              onClaim: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Food claim requested successfully!")),
-                );
-              },
-            ),
-
-            // ডেমো এভেইলেবল ফুড কার্ড ২
-            _buildAvailableFoodCard(
-              context,
-              title: "Mixed Vegetable & Roti",
-              quantity: "10 Persons",
-              location: "Banani, Dhaka",
-              donor: "Community Kitchen",
-              onClaim: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Food claim requested successfully!")),
-                );
-              },
-            ),
+            // যদি কোনো Approved পোস্ট না থাকে
+            if (approvedList.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 30.0),
+                  child: Text(
+                    "No approved food items available right now 🍲",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ),
+              )
+            else
+              ...approvedList.map((item) => _buildAvailableFoodCard(context, item)),
           ],
         ),
       ),
@@ -133,14 +132,7 @@ class VolunteerDashboardScreen extends StatelessWidget {
   }
 
   // এভেইলেবল ফুড আইটেম কার্ড
-  Widget _buildAvailableFoodCard(
-    BuildContext context, {
-    required String title,
-    required String quantity,
-    required String location,
-    required String donor,
-    required VoidCallback onClaim,
-  }) {
+  Widget _buildAvailableFoodCard(BuildContext context, FoodItem item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -152,11 +144,13 @@ class VolunteerDashboardScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 Container(
@@ -166,7 +160,7 @@ class VolunteerDashboardScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    quantity,
+                    item.quantity,
                     style: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.bold,
@@ -181,18 +175,36 @@ class VolunteerDashboardScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.location_on, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(location, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(item.location, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                 const SizedBox(width: 16),
-                const Icon(Icons.person, size: 14, color: Colors.grey),
+                const Icon(Icons.phone, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(donor, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(item.phone, style: const TextStyle(color: Colors.grey, fontSize: 13)),
               ],
             ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                "Note: ${item.description}",
+                style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.black54),
+              ),
+            ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: onClaim,
+                onPressed: () {
+                  // ক্লিম করার পর লিস্ট থেকে রিমুভ বা স্ট্যাটাস আপডেট করা
+                  setState(() {
+                    FoodRepository.updateStatus(item.id, 'Claimed');
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Food claim requested successfully! Thank you hero! ❤️"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
