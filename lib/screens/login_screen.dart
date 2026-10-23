@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   String _selectedRole = 'donor';
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,27 +27,74 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    String name = "User";
-    if (_selectedRole == 'donor') name = "Food Donor";
-    if (_selectedRole == 'volunteer') name = "Hero Volunteer";
-    if (_selectedRole == 'admin') name = "System Admin";
-
-    AuthService.login(_selectedRole, name);
-
-    Widget destination;
-    if (_selectedRole == 'admin') {
-      destination = const AdminDashboardScreen();
-    } else if (_selectedRole == 'volunteer') {
-      destination = const VolunteerDashboardScreen();
-    } else {
-      destination = const HomeScreen();
+  Future<void> _handleLogin() async {
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => destination),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // ১. ফায়ারবেসে লগইন করা
+      var userCredential = await _authService.loginWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (userCredential != null && userCredential.user != null) {
+        String uid = userCredential.user!.uid;
+
+        // ২. ডেটাবেজ থেকে ইউজারের আসল রোল চেক করা
+        String? role = await _authService.getUserRole(uid);
+
+        if (!mounted) return;
+
+        if (role != null) {
+          Widget destination;
+          if (role == 'admin') {
+            destination = const AdminDashboardScreen();
+          } else if (role == 'volunteer') {
+            destination = const VolunteerDashboardScreen();
+          } else {
+            destination = const HomeScreen();
+          }
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => destination),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("ইউজার রোল পাওয়া যায়নি!"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("লগইন ব্যর্থ হয়েছে: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -157,11 +206,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: _handleLogin,
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: _isLoading ? null : _handleLogin,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Login",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 16),

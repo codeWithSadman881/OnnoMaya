@@ -25,6 +25,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String _selectedRole = 'donor'; // 'donor' or 'volunteer'
   String _selectedDonorType = 'Individual'; // 'Individual', 'Restaurant / Hotel', 'Event Organizer'
+  
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -38,7 +41,7 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
     if (_nameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
@@ -52,29 +55,58 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    String displayName = _nameController.text.trim();
-    if (_selectedRole == 'donor' && _selectedDonorType != 'Individual' && _orgNameController.text.trim().isNotEmpty) {
-      displayName = "${_nameController.text.trim()} (${_orgNameController.text.trim()})";
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String displayName = _nameController.text.trim();
+      if (_selectedRole == 'donor' && _selectedDonorType != 'Individual' && _orgNameController.text.trim().isNotEmpty) {
+        displayName = "${_nameController.text.trim()} (${_orgNameController.text.trim()})";
+      }
+
+      // Firebase-এর মাধ্যমে সাইন-আপ এবং ডেটাবেজে সেভ করা
+      await _authService.signUpWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        name: displayName,
+        phone: _phoneController.text.trim(),
+        role: _selectedRole,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("একাউন্ট সফলভাবে তৈরি হয়েছে! 🎉"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Widget destination = _selectedRole == 'volunteer'
+          ? const VolunteerDashboardScreen()
+          : const HomeScreen();
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => destination),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("সাইন-আপ ব্যর্থ হয়েছে: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    AuthService.login(_selectedRole, displayName);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("একাউন্ট সফলভাবে তৈরি হয়েছে! 🎉"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Widget destination = _selectedRole == 'volunteer'
-        ? const VolunteerDashboardScreen()
-        : const HomeScreen();
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => destination),
-      (route) => false,
-    );
   }
 
   @override
@@ -270,11 +302,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: _handleSignup,
-                  child: const Text(
-                    "Sign Up",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: _isLoading ? null : _handleSignup,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Sign Up",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),

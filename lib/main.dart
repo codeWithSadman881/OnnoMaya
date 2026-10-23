@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart'; // লগইন স্ক্রিন ইম্পোর্ট
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // ফায়ারবেসের ওয়েব কনফিগারেশনের জন্য এটি প্রয়োজন
+import 'screens/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // ফ্লাটার ওয়েবের জন্য অপশনসহ ফায়ারবেস ইনিশিয়ালাইজ করা
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const FoodResqApp());
 }
 
@@ -17,7 +26,7 @@ class FoodResqApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
         useMaterial3: true,
       ),
-      home: const LoginScreen(), // রোল সিলেকশনের বদলে লগইন স্ক্রিন সেট করা হলো
+      home: const LoginScreen(),
     );
   }
 }
