@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ফায়ারবেস অথেন্টিকেশন প্যাকেজ ইমপোর্ট করা হয়েছে
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!"),
+          content: Text("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!"),
           backgroundColor: Colors.red,
         ),
       );
@@ -43,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // ১. ফায়ারবেসে লগইন করা
+      // ১. ফায়ারবেসে লগইন করা
       var userCredential = await _authService.loginWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -74,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("ইউজার রোল পাওয়া যায়নি!"),
+              content: Text("ইউজার রোল পাওয়া যায়নি!"),
               backgroundColor: Colors.red,
             ),
           );
@@ -84,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("লগইন ব্যর্থ হয়েছে: ${e.toString()}"),
+          content: Text("লগইন ব্যর্থ হয়েছে: ${e.toString()}"),
           backgroundColor: Colors.red,
         ),
       );
@@ -95,6 +96,82 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  // পাসওয়ার্ড রিসেট করার ডায়ালগ বক্স ফাংশন
+  void _showForgotPasswordDialog(BuildContext context) {
+    final TextEditingController resetEmailController = TextEditingController();
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Reset Password"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Enter your registered email address to receive a password reset link.",
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: resetEmailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+              onPressed: () async {
+                String email = resetEmailController.text.trim();
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter your email address")),
+                  );
+                  return;
+                }
+
+                try {
+                  // ফায়ারবেসের বিল্ট-ইন পাসওয়ার্ড রিসেট মেথড
+                  await _auth.sendPasswordResetEmail(email: email);
+                  
+                  if (!mounted) return;
+                  Navigator.pop(context); // ডায়ালগ বন্ধ করা
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Password reset link sent! Check your email."),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Error: ${e.toString()}"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text("Send Link"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -193,7 +270,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 24),
+              
+              // Forgot Password বাটন যুক্ত করা হয়েছে এখানে
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => _showForgotPasswordDialog(context),
+                  child: const Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
 
               SizedBox(
                 width: double.infinity,

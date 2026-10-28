@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/food_item.dart';
 import '../services/food_repository.dart';
+import '../services/auth_service.dart';
 import '../widgets/food_card.dart';
 import 'donate_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -15,6 +16,39 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _activeFilter = 'all'; // 'all', 'human', 'animal'
+  
+  String? _userRole;
+  bool _isRoleLoading = true;
+  final AuthService _authService = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserRole();
+  }
+
+  // ফায়ারবেস বা অথ সার্ভিস থেকে ইউজারের রোল ফেচ করার ফাংশন
+  Future<void> _fetchCurrentUserRole() async {
+    try {
+      // এখানে _authService.currentUser একটি getter, তাই ব্র্যাকেট () হবে না
+      var currentUser = _authService.currentUser; 
+      if (currentUser != null) {
+        String? role = await _authService.getUserRole(currentUser.uid);
+        setState(() {
+          _userRole = role;
+          _isRoleLoading = false;
+        });
+      } else {
+        setState(() {
+          _isRoleLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isRoleLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,28 +70,34 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         actions: [
-          // ভলান্টিয়ার প্যানেল শর্টকাট
-          IconButton(
-            icon: const Icon(Icons.delivery_dining),
-            tooltip: "Volunteer Panel",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const VolunteerDashboardScreen()),
-              ).then((_) => setState(() {}));
-            },
-          ),
-          // এডমিন প্যানেল শর্টকাট
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            tooltip: "Admin Panel",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-              ).then((_) => setState(() {}));
-            },
-          ),
+          // রোল চেক করে শুধু নির্দিষ্ট ইউজারের জন্য প্যানেল শর্টকাট দেখানো
+          if (!_isRoleLoading) ...[
+            // ভলান্টিয়ার প্যানেল শর্টকাট (শুধু volunteer বা admin দেখতে পাবে)
+            if (_userRole == 'volunteer' || _userRole == 'admin')
+              IconButton(
+                icon: const Icon(Icons.delivery_dining),
+                tooltip: "Volunteer Panel",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const VolunteerDashboardScreen()),
+                  ).then((_) => setState(() {}));
+                },
+              ),
+
+            // এডমিন প্যানেল শর্টকাট (শুধু admin দেখতে পাবে)
+            if (_userRole == 'admin')
+              IconButton(
+                icon: const Icon(Icons.admin_panel_settings),
+                tooltip: "Admin Panel",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                  ).then((_) => setState(() {}));
+                },
+              ),
+          ],
         ],
       ),
       body: Column(
@@ -109,7 +149,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 : ListView.builder(
                     itemCount: filteredItems.length,
                     itemBuilder: (context, index) {
-                      final item = filteredItems[index];
+                      final item = filteredItems.length > index ? filteredItems[index] : null;
+                      if (item == null) return const SizedBox();
                       return FoodCard(
                         item: item,
                         onRequest: () {
@@ -130,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         onPressed: () {
-          // DonateScreen-এ নিয়ে যাওয়া এবং ফিরে আসলে পেজ রিফ্রেশ করা
+          // DonateScreen-এ নিয়ে যাওয়া এবং ফিরে আসলে পেজ রিফ্রেশ করা
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const DonateScreen()),
